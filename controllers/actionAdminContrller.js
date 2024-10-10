@@ -1,7 +1,4 @@
 const  connection  = require("../db.config");
-const path = require('path'); // เพิ่มบรรทัดนี้เพื่อเรียกใช้งานโมดูล path
-const fs = require('fs');
-
 
 
 exports.admin_getUsers = async(req,res)=>{
@@ -60,29 +57,9 @@ exports.admin_DeleteUser = async (req, res) => {
 
     try {
         
-        const [rows] = await connection.execute('SELECT User_Image,User_file FROM users WHERE User_id  = ?', [userId]);
-
-
-        if (rows.affectedRows === 0) {
-            return res.status(404).send('users not found');
-        }
-
-
-        // Define paths for documents and images
-
-        const documentFolderPath = path.join('uploads', 'User','documents',userId);  // Parent folder for the user
-        const imagesFolderPath = path.join('uploads', 'User','images',userId);  // Parent folder for the user
-
-
         // Delete the user from the database
         await connection.execute("DELETE FROM users WHERE User_id = ?;", [userId]);
 
-        // Delete the user document folder if it exists
-
-
-        await deleteDirectory(documentFolderPath);
-
-        await deleteDirectory(imagesFolderPath);
 
         console.log('Delete Successfully');
         res.status(200).send("Delete Successfully.");
@@ -92,14 +69,3 @@ exports.admin_DeleteUser = async (req, res) => {
     }
 };
 
-
-
-// Function to delete a directory and its contents
-const deleteDirectory = (dirPath) => {
-    return new Promise((resolve, reject) => {
-        fs.rm(dirPath, { recursive: true, force: true }, (err) => {
-            if (err) reject(err);
-            resolve();
-        });
-    });
-};

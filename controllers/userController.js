@@ -1,19 +1,7 @@
 const  connection  = require("../db.config");
-const fs = require('fs');
-const path = require('path');
 
 
-const { uploadMiddleware } = require('../middlewares/upload');
 
-
-const deleteFile = (filePath) => {
-    return new Promise((resolve, reject) => {
-        fs.unlink(filePath, (err) => {
-            if (err) reject(err);
-            resolve();
-        });
-    });
-};
 
 const generateUserId = async () => {
     const [rows] = await connection.query('SELECT User_id FROM users ORDER BY User_id DESC LIMIT 1');
@@ -44,24 +32,15 @@ exports.CreateUser = async (req, res) => {
     try {
         // สร้าง user_id ใหม่
         const newUserId = await generateUserId();
+        
 
         // เพิ่ม user_id ไปยัง req เพื่อใช้ใน middleware
         req.User_id = newUserId;
 
-        // เรียกใช้ uploadMiddleware
-        uploadMiddleware(req, res, async (err) => {
-            if (err) {
-                return res.status(400).send('Error uploading files: ' + err.message);
-            }
-
-            
-
-            const { National_ID, User_prefix, User_Fname, User_Lname, User_gender, User_Date_Birth, User_age, phone_num, User_email, User_status, project_id_fk } = req.body;
-            const User_Image = req.files['User_Image'] ? req.files['User_Image'][0].filename : null;
-            const User_file = req.files['User_file'] ? req.files['User_file'][0].filename : null;
+            const { National_ID, User_prefix, User_Fname, User_Lname, User_gender, User_Date_Birth, User_age, phone_num, User_email, User_status, project_id_fk,User_Image,User_file } = req.body;
 
             if (!National_ID || !User_prefix || !User_Fname || !User_Lname || !User_gender || !User_Date_Birth
-                || !User_age || !phone_num || !User_email || !User_status || !User_Image || !User_file || !project_id_fk) {
+                || !User_age || !phone_num || !User_email || !User_status || !User_Image || !User_file || !project_id_fk ||!User_Image||!User_file) {
                 return res.status(400).send('Missing required fields');
             }
 
@@ -80,7 +59,6 @@ exports.CreateUser = async (req, res) => {
             } catch (err) {
                 res.status(500).json({ message: err.message });
             }
-        });
     } catch (err) {
         res.status(500).send('An error occurred: ' + err.message);
     }
@@ -94,8 +72,8 @@ exports.getUsers = async(req,res) =>{
         
                var rawData = result[0];
         
-               res.send(rawData);
-        
+               
+               res.status(200).json(rawData);
                
         
             }).catch((err) => {
@@ -109,7 +87,8 @@ exports.getUsers = async(req,res) =>{
 
 exports.getUser = async(req,res) =>{
     const National_ID = req.params.id;
-    const projectID = req.query.project_id;
+    //const projectID = req.query.project_id;
+    const { projectID } = req.body;
 
     try {
         const [rows] = await connection.execute(`
@@ -145,33 +124,9 @@ exports.getUser = async(req,res) =>{
 }
 
 exports.UpdateUser =  async(req,res) =>{
+    const {User_Flie} = req.body
     
     const now = new Date().toISOString().slice(0,19).replace('T', ' ');
-
-    if (!req.file) {
-        return res.status(400).send("No file uploaded.");
-    }
-
-    const User_Flie = req.file.filename; // ตั้งค่า User_Flie เป็นชื่อไฟล์ที่อัปโหลด
-    
-    
-    // ตรวจสอบว่าค่าของ User_Flie เป็น undefined หรือไม่
-    if (User_Flie === undefined) {
-        return res.status(400).send("File name is undefined.");
-    }
-
-    
-
-    // ดึงข้อมูลไฟล์เก่าจากฐานข้อมูล
-    const [rows] = await connection.execute("SELECT User_file FROM users WHERE User_id=?", [req.params.id]);
-
-    if (rows.length > 0) {
-        const oldFile = rows[0].User_file;
-        const oldFilePath = path.join('uploads', 'User', 'documents', req.params.id, oldFile);
-
-        deleteFile(oldFilePath);
-    }
-
     connection.execute("UPDATE users SET User_status=?, User_file=?, update_at=? WHERE User_id=?",
         ['รอการตรวจสอบ',User_Flie, now, req.params.id]
     ).then(() =>{
